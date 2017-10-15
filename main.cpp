@@ -12,7 +12,6 @@ int main(int argc, char** argv) {
    std::string parametro;
    const char* config_file;
    const char* sql_sentence;
-//   std::string format;
    OutputFormat format_t;
    
    for (unsigned short i = 1; i <= argc; ++i) {
