@@ -14,15 +14,18 @@ int main(int argc, char** argv) {
    const char* sql_sentence;
    OutputFormat format_t;
    
-   for (unsigned short i = 1; i <= argc; ++i) {
-      if (i != argc)
-         parametro = argv[i];
+   for (unsigned short i = 1; i < argc; i = i + 2) {
+      parametro = argv[i];
       if ((parametro.compare("-c") == 0) or (parametro.compare("--config") == 0)) {
          config_file = argv[i+1];
       } else if ((parametro.compare("-s") == 0) or (parametro.compare("--sql") == 0)) {
          sql_sentence = argv[i+1];
       } else if ((parametro.compare("-f") == 0) or (parametro.compare("--output-format") == 0)) {
-         std::string temp = argv[i+1];
+         std::string temp;
+         if (i + 1 < argc)
+            temp = argv[i+1];  // Bug!  Si no se le entrega nada al argumento -f, se inicializa el string constructor en NULL.
+         else
+            temp = "";
          if (temp.compare("csv") == 0)
             format_t = OutputFormat::csv;
          else if (temp.compare("json") == 0)
@@ -33,10 +36,13 @@ int main(int argc, char** argv) {
         }
       } else if ((parametro.compare("-h") == 0) or (parametro.compare("--help") == 0)) {
          std::cout << "\nHelp:\n\t-c, --config  <file>   insert DB configuration file.\n\t-f, --output-format <csv|json>\n\t-s, --sql <sentence>   insert SQL sentence to execute.\n\n";
-                 return -1;
+                 return 0;
+      } else {
+          std::cout << "Invalid arguments.\n";
+          return -1;
       }
    }
-   
+
    // Get database credentials from configuration file
    std::string db_user_name, db_password, db_conn_str;
    std::ifstream configs (config_file, std::ifstream::in);
@@ -52,7 +58,7 @@ int main(int argc, char** argv) {
           db_user_name = valor;
        } else if (configurador.compare("password ") == 0) {
           db_password = valor;
-       } else if (configurador.compare("ConnectionString ") == 0) {
+       } else if (configurador.compare("connection_string ") == 0) {
           db_conn_str = valor;
        }
    }
