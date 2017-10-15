@@ -5,12 +5,15 @@
 #include <vector>
 
 using namespace oracle::occi; 
+enum class OutputFormat : unsigned char {csv,json};
 
 int main(int argc, char** argv) {
    // Conf loading from arguments
    std::string parametro;
    const char* config_file;
    const char* sql_sentence;
+//   std::string format;
+   OutputFormat format_t;
    
    for (unsigned short i = 1; i <= argc; ++i) {
       if (i != argc)
@@ -19,8 +22,18 @@ int main(int argc, char** argv) {
          config_file = argv[i+1];
       } else if ((parametro.compare("-s") == 0) or (parametro.compare("--sql") == 0)) {
          sql_sentence = argv[i+1];
+      } else if ((parametro.compare("-f") == 0) or (parametro.compare("--output-format") == 0)) {
+         std::string temp = argv[i+1];
+         if (temp.compare("csv") == 0)
+            format_t = OutputFormat::csv;
+         else if (temp.compare("json") == 0)
+            format_t = OutputFormat::json;
+         else {
+            std::cout << "Invalid output format.\n";
+            return -1;
+        }
       } else if ((parametro.compare("-h") == 0) or (parametro.compare("--help") == 0)) {
-         std::cout << "Ayuda:\n\n\t-c, --config  <file>   insert DB configuration file.\n\t-s, --sql <sentence>   insert SQL sentence to execute.\n\n";
+         std::cout << "\nHelp:\n\t-c, --config  <file>   insert DB configuration file.\n\t-f, --output-format <csv|json>\n\t-s, --sql <sentence>   insert SQL sentence to execute.\n\n";
                  return -1;
       }
    }
@@ -45,41 +58,65 @@ int main(int argc, char** argv) {
        }
    }
    
-   try{
+   try {
 	  // Open DB connections
       Environment* env = Environment::createEnvironment(Environment::OBJECT); 
       Connection* conn = env->createConnection(db_user_name.c_str(), db_password.c_str(), db_conn_str.c_str()); 
       Statement* stmt = conn->createStatement(sql_sentence); 
       ResultSet* rs = stmt->executeQuery();
-	  stmt->getUb8RowCount();
-      
-	  // print column names
+
       std::vector<MetaData> vc_columns;
       vc_columns = rs->getColumnListMetaData();
-      for (unsigned short j = 0; j < vc_columns.size(); ++j) {
-        std::cout << "\"" << vc_columns[j].getString(MetaData::ATTR_NAME) << "\","; 
-      }
-      std::cout << std::endl;
+      std::string strResult;
+      
+      switch (format_t) {
+          case OutputFormat::csv:
+                // print column names
+                for (unsigned short j = 0; j < vc_columns.size(); ++j) {
+                    std::cout << "\"" << vc_columns[j].getString(MetaData::ATTR_NAME) << "\","; 
+                }
+                std::cout << std::endl;
 
-	  // fetch rows one by one
-	  std::string strResult;
-      while (rs->next() == ResultSet::DATA_AVAILABLE) {
-		   std::cout << "Flag!\n";
-           std::cout << "getNumArrayRows() = " << rs->getNumArrayRows() << std::endl;
-           for (unsigned short i = 1; i <= vc_columns.size() ; ++i) {
-               strResult = rs->getString(i);
-               std::cout << "\"" << strResult << "\",";
-           }
-           std::cout << std::endl;
-		   std::cout << "rs->status() = " << rs->status() << std::endl;
+                // fetch rows one by one
+                while (rs->next() == ResultSet::DATA_AVAILABLE) {
+                    std::cout << "Flag!\n";
+                    std::cout << "getNumArrayRows() = " << rs->getNumArrayRows() << std::endl;
+                    for (unsigned short i = 1; i <= vc_columns.size() ; ++i) {
+                        strResult = rs->getString(i);
+                        std::cout << "\"" << strResult << "\",";
+                    }
+                    std::cout << std::endl;
+                    std::cout << "rs->status() = " << rs->status() << std::endl;
+                }
+                break;
+          case OutputFormat::json:
+            {
+                bool esElPrimero = true;
+                std::cout << "{\n\t\"Result\": [";
+                while (rs->next() == ResultSet::DATA_AVAILABLE) {
+                    if (!esElPrimero) {
+                        std::cout << ",";
+                        esElPrimero = false;
+                    }
+                    std::cout << "\n\t\t\t{";
+                    for (unsigned short k = 0; k < vc_columns.size(); ++k) {
+                        std::cout << "\"" << vc_columns[k].getString(MetaData::ATTR_NAME) << "\":";
+                        strResult = rs->getString(k+1);
+                        std::cout << "\"" << strResult << "\"";
+                        if (k != vc_columns.size() - 1)
+                            std::cout << ",";
+                    }
+                    std::cout << "}";
+                }
+                std::cout << "\t\t\t]\n}";
+            }
+            break;
       }
-
 	  // Close DB connection.
       stmt->closeResultSet(rs); 
       env->terminateConnection(conn); 
       Environment::terminateEnvironment(env);
-   }
-   catch(SQLException &sqlExcp) { 
+   } catch(SQLException &sqlExcp) { 
       std::cerr << sqlExcp.getErrorCode() << sqlExcp.getMessage() << std::endl; 
    } 
    return 0;
