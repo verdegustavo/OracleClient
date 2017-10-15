@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
       } else if ((parametro.compare("-f") == 0) or (parametro.compare("--output-format") == 0)) {
          std::string temp;
          if (i + 1 < argc)
-            temp = argv[i+1];  // Bug!  Si no se le entrega nada al argumento -f, se inicializa el string constructor en NULL.
+            temp = argv[i+1];
          else
             temp = "";
          if (temp.compare("csv") == 0)
