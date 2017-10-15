@@ -5,7 +5,7 @@
 #include <vector>
 
 using namespace oracle::occi; 
-enum class OutputFormat : unsigned char {csv,json};
+enum OutputFormat {csv,json};
 
 int main(int argc, char** argv) {
    // Conf loading from arguments
@@ -27,9 +27,9 @@ int main(int argc, char** argv) {
          else
             temp = "";
          if (temp.compare("csv") == 0)
-            format_t = OutputFormat::csv;
+            format_t = csv;
          else if (temp.compare("json") == 0)
-            format_t = OutputFormat::json;
+            format_t = json;
          else {
             std::cout << "Invalid output format.\n";
             return -1;
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
    }
    
    try {
-	  // Open DB connections
+          // Open DB connections
       Environment* env = Environment::createEnvironment(Environment::OBJECT); 
       Connection* conn = env->createConnection(db_user_name.c_str(), db_password.c_str(), db_conn_str.c_str()); 
       Statement* stmt = conn->createStatement(sql_sentence); 
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
       std::string strResult;
       
       switch (format_t) {
-          case OutputFormat::csv:
+          case csv:
                 // print column names
                 for (unsigned short j = 0; j < vc_columns.size(); ++j) {
                     std::cout << "\"" << vc_columns[j].getString(MetaData::ATTR_NAME) << "\","; 
@@ -84,26 +84,22 @@ int main(int argc, char** argv) {
 
                 // fetch rows one by one
                 while (rs->next() == ResultSet::DATA_AVAILABLE) {
-                    std::cout << "Flag!\n";
-                    std::cout << "getNumArrayRows() = " << rs->getNumArrayRows() << std::endl;
                     for (unsigned short i = 1; i <= vc_columns.size() ; ++i) {
                         strResult = rs->getString(i);
                         std::cout << "\"" << strResult << "\",";
                     }
                     std::cout << std::endl;
-                    std::cout << "rs->status() = " << rs->status() << std::endl;
                 }
                 break;
-          case OutputFormat::json:
+          case json:
             {
                 bool esElPrimero = true;
                 std::cout << "{\n\t\"Result\": [";
                 while (rs->next() == ResultSet::DATA_AVAILABLE) {
-                    if (!esElPrimero) {
+                    if (!esElPrimero) 
                         std::cout << ",";
-                        esElPrimero = false;
-                    }
-                    std::cout << "\n\t\t\t{";
+                    esElPrimero = false;
+                    std::cout << "\t\t\t{";
                     for (unsigned short k = 0; k < vc_columns.size(); ++k) {
                         std::cout << "\"" << vc_columns[k].getString(MetaData::ATTR_NAME) << "\":";
                         strResult = rs->getString(k+1);
@@ -113,11 +109,11 @@ int main(int argc, char** argv) {
                     }
                     std::cout << "}";
                 }
-                std::cout << "\t\t\t]\n}";
+                std::cout << "\n\t\t\t]\n}\n";
             }
             break;
       }
-	  // Close DB connection.
+          // Close DB connection.
       stmt->closeResultSet(rs); 
       env->terminateConnection(conn); 
       Environment::terminateEnvironment(env);
